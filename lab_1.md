@@ -1,3 +1,53 @@
+## Part 1 — Component Diagram
+
+```mermaid
+flowchart LR
+    subgraph Clients
+        Sender[Sender Client\n(Mobile/Web)]
+        Receiver[Receiver Client\n(Often Offline)]
+    end
+
+    API[Backend API Gateway]
+    Auth[Auth Service]
+    MsgService[Message Service]
+    DB[(Main Database)]
+    Queue[[Message Broker\nRabbitMQ / SQS]]
+    PushService[Push Notification\nAPNs / FCM]
+
+    Sender -- "1. Send Message (HTTP/REST)" --> API
+    API -- "2. Validate Token" --> Auth
+    API -- "3. Forward" --> MsgService
+    MsgService -- "4. Save Metadata" --> DB
+    MsgService -- "5. Enqueue for Receiver" --> Queue
+    
+    Queue -- "6. Trigger Wake-up" --> PushService
+    PushService -. "7. Silent Push" .-> Receiver
+    Receiver -- "8. Connect & Fetch (WebSocket)" --> Queue
+    Receiver -- "9. ACK Delivery" --> Queue
+```markdown
+##State Diagram
+```mermaid
+stateDiagram-v2
+    [*] --> Created: User types message
+    Created --> Sending: Client initiates request
+    Sending --> FailedSend: Network disconnected
+    FailedSend --> RetryingSend: Exponential backoff
+    RetryingSend --> Sending: Network restored
+    
+    Sending --> PersistedInQueue: Server accepts & stores
+    
+    PersistedInQueue --> PushTriggered: Receiver is offline
+    PushTriggered --> Delivering: Device wakes up
+    PersistedInQueue --> Delivering: Receiver is online (WebSocket open)
+    
+    Delivering --> FailedDelivery: Connection dropped
+    FailedDelivery --> PersistedInQueue: Message stays in queue
+    
+    Delivering --> Delivered: Client saves locally & sends ACK
+    
+    Delivered --> Read: User opens chat
+    Read --> [*]
+
 # ADR-003 Offline Message Delivery Architecture
 
 | Field             | Value                          |
