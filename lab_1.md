@@ -1,4 +1,4 @@
-## Part 1 — Component Diagram
+##Component Diagram
 
 ```mermaid
 flowchart LR
@@ -24,11 +24,14 @@ flowchart LR
     PushService -. "7. Silent Push" .-> Receiver
     Receiver -- "8. Connect & Fetch (WebSocket)" --> Queue
     Receiver -- "9. ACK Delivery" --> Queue
-```markdown
+```
+
 ##State Diagram
+
 ```mermaid
 stateDiagram-v2
     [*] --> Created: User types message
+    
     Created --> Sending: Client initiates request
     Sending --> FailedSend: Network disconnected
     FailedSend --> RetryingSend: Exponential backoff
@@ -47,6 +50,7 @@ stateDiagram-v2
     
     Delivered --> Read: User opens chat
     Read --> [*]
+```
 
 # ADR-003 Offline Message Delivery Architecture
 
