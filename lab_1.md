@@ -3,16 +3,16 @@
 ```mermaid
 flowchart LR
     subgraph Clients
-        Sender[Sender Client\n(Mobile/Web)]
-        Receiver[Receiver Client\n(Often Offline)]
+        Sender["Sender Client<br/>(Mobile/Web)"]
+        Receiver["Receiver Client<br/>(Often Offline)"]
     end
 
     API[Backend API Gateway]
     Auth[Auth Service]
     MsgService[Message Service]
     DB[(Main Database)]
-    Queue[[Message Broker\nRabbitMQ / SQS]]
-    PushService[Push Notification\nAPNs / FCM]
+    Queue[["Message Broker<br/>(RabbitMQ / SQS)"]]
+    PushService["Push Notification Service<br/>(APNs / FCM)"]
 
     Sender -- "1. Send Message (HTTP/REST)" --> API
     API -- "2. Validate Token" --> Auth
