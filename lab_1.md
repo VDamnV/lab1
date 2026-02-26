@@ -1,103 +1,97 @@
-🧪 Laboratory Work 1: Messaging System Design
-Variant 3 — Offline Message Delivery
-
-🎯 Context
-Проєктування мінімальної системи обміну повідомленнями з акцентом на асинхронну доставку та гарантоване збереження повідомлень для користувачів, які тривалий час перебувають в офлайні. Повідомлення не повинні бути втрачені незалежно від того, як довго отримувач не був у мережі.
+🧪 Laboratory Work 1: Variant 3
+Designing a Messaging System with Focus on Offline Delivery
 
 🧱 Part 1 — Component Diagram
-Оскільки користувачі можуть бути офлайн тривалий час, система використовує гібридний підхід: чергу для спроб швидкої доставки (Push) та базу даних як надійне джерело істини для подальшої синхронізації (Pull), коли користувач повертається в мережу.
+Для забезпечення надійності ми використовуємо архітектуру, що базується на подіях (Event-Driven). Message Store гарантує персистентність, а Notification Service відповідає за пробудження офлайн-клієнтів через Push-сповіщення.
 
-<pre><code>```mermaid
 graph TD
-Client[Client App] -->|HTTPS / WebSocket| API[API Gateway]
-API --> Auth[Auth Service]
-API --> MsgService[Message Service]
+    Client_A[Client A] --> API[Backend API]
+    Client_B[Client B]
+    
+    API --> MS[Message Service]
+    MS --> DB[(Persistent Store: PostgreSQL/Cassandra)]
+    MS --> Queue{Message Broker / Queue}
+    
+    Queue --> DS[Delivery Service]
+    DS --> WS[WebSocket Manager]
+    DS --> Push[Push Notification Service]
+    
+    WS --> Client_B
+    Push -- "Trigger" --> Client_B
 
-MsgService --> DB[(Persistent DB)]
-MsgService --> Queue[Message Queue]
-
-Queue --> DeliveryService[Delivery Service]
-DeliveryService --> Presence[(Presence Cache)]
-
-DeliveryService -- "User Online (Push)" --> Client
-DeliveryService -- "User Offline (Update Status)" --> DB
-
-Client -- "Wake Up Sync (Pull)" --> API
-  
 🔁 Part 2 — Sequence Diagram
-Сценарій: Користувач A відправляє повідомлення Користувачу B, який наразі офлайн. Пізніше Користувач B підключається до мережі та отримує (синхронізує) свої повідомлення.
+Сценарій: Користувач А надсилає повідомлення користувачу Б, який перебуває офлайн. Система зберігає повідомлення та ініціює доставку через Push-сповіщення.
 
 sequenceDiagram
-  participant A as User A
-  participant ClientA as Client A
-  participant API
-  participant Msg as Message Service
-  participant DB
-  participant Queue
-  participant Delivery as Delivery Service
-  participant ClientB as Client B
+    participant A as User A
+    participant API as Backend API
+    participant MS as Message Service
+    participant DB as Database
+    participant Q as Delivery Queue
+    participant PS as Push Service
+    participant B as User B (Offline)
 
-  A->>ClientA: Send message
-  ClientA->>API: POST /messages
-  API->>Msg: createMessage()
-  Msg->>DB: save(status: "Stored")
-  Msg->>Queue: enqueue delivery task
-  API-->>ClientA: 202 Accepted
-
-  Queue->>Delivery: process message delivery
-  Delivery->>Delivery: Check recipient presence
-  Note over Delivery, ClientB: Recipient is OFFLINE
-  Delivery->>DB: update(status: "PendingSync")
-  
-  Note over ClientB, API: Hours later... User B comes online
-  
-  ClientB->>API: GET /messages/sync (App wakeup)
-  API->>Msg: getUndeliveredMessages(User B)
-  Msg->>DB: fetch(status: "PendingSync")
-  DB-->>Msg: [messages list]
-  Msg-->>API: [messages list]
-  API-->>ClientB: 200 OK (messages)
-  
-  ClientB->>API: POST /messages/ack (IDs)
-  API->>Msg: markAsDelivered()
-  Msg->>DB: update(status: "Delivered")
+    A->>API: POST /send_message
+    API->>MS: Process Message
+    MS->>DB: Save Message (Status: PENDING)
+    MS->>Q: Publish Delivery Task
+    API-->>A: 202 Accepted (Message Sent)
+    
+    Note over Q, PS: Delivery Service picks up task
+    Q->>PS: User B is offline, send Push
+    PS-->>B: Notification: "You have a new message"
+    
+    Note over B, DB: User B comes online later
+    B->>API: GET /sync_messages
+    API->>DB: Fetch unread messages
+    DB-->>B: Return Messages
+    B->>API: ACK (Message Received)
+    API->>DB: Update Status (DELIVERED)
 
 🔄 Part 3 — State Diagram
-Життєвий цикл повідомлення (Message) з урахуванням того, що система орієнтована на тривалі офлайн-періоди.
+Об'єкт: Message (Життєвий цикл повідомлення в умовах тривалого офлайну).
 
 stateDiagram-v2
-  [*] --> Created
-  Created --> Stored : Saved to DB
-  
-  Stored --> DeliveryAttempted : Pushed to Queue
-  
-  DeliveryAttempted --> Delivered : Recipient Online (Push)
-  DeliveryAttempted --> PendingSync : Recipient Offline (Stored for Pull)
-  
-  PendingSync --> Delivered : Client Reconnects & Syncs
-  
-  Delivered --> Read
-  Read --> [*]
+    [*] --> Created
+    Created --> Stored: Persistence confirmed
+    Stored --> PendingDelivery: Added to Queue
+    
+    state PendingDelivery {
+        [*] --> WaitingForUser
+        WaitingForUser --> Notifying: Trigger Push
+        Notifying --> WaitingForUser: Retry if failed
+    }
+    
+    PendingDelivery --> Delivered: User online & ACK received
+    Delivered --> Read: User opened chat
+    
+    PendingDelivery --> Expired: TTL reached (e.g., 30 days)
+    Expired --> [*]
+    Read --> [*]
 
 📚 Part 4 — ADR (Architecture Decision Record)
 
-# ADR-001: Hybrid Message Delivery Strategy (Push + Sync) for Offline Users
+# ADR-003: Store-and-Forward approach with Push Notifications
 
 ## Status
 Accepted
 
 ## Context
-Our messenger must ensure reliable delivery even if users remain offline for extended periods (days or weeks). Relying purely on a Message Queue for delivery (keeping messages in the queue until the user comes online) is dangerous: queues can overflow, messages might expire (TTL), and it makes queue management heavily stateful and expensive.
+Користувачі можуть бути офлайн протягом тривалого часу (дні або тижні). Повідомлення не повинні бути втрачені, а отримувач має дізнатися про них навіть із закритою програмою.
 
 ## Decision
-We will use a **Hybrid Delivery Mechanism**:
-1. **Push Mechanism (via Queue)**: When a message is sent, it is briefly placed in a queue for immediate delivery attempt if the user is currently online.
-2. **Pull/Sync Mechanism (via DB)**: If the Delivery Service detects the user is offline, the message is marked as "PendingSync" in the persistent database and *removed* from the active message queue. When the offline user's application wakes up or reconnects, it will explicitly query the API (Pull) to synchronize all missed messages.
+Ми впроваджуємо стратегію "Store-and-Forward":
+1. Кожне повідомлення обов'язково зберігається в базі даних перед спробою доставки.
+2. Використовується черга повідомлень (Message Queue) для асинхронної обробки.
+3. Якщо WebSocket-з'єднання з отримувачем відсутнє, система автоматично надсилає Push-сповіщення (Firebase Cloud Messaging або Apple Push Notification service).
+4. Доставка вважається успішною лише після отримання прикладного підтвердження (ACK) від клієнта отримувача.
 
-## Alternatives Considered
-- **Pure Message Queue (e.g., MQTT/RabbitMQ offline queues)**: Rejected. Keeping messages in transient queues for long periods risks data loss upon broker restarts and scales poorly for millions of offline users.
-- **Client Polling Only**: Rejected. Constant polling when users are online drains battery and wastes server resources.
+## Alternatives
+- **Client Polling:** Відхилено через високе навантаження на сервер та швидке розряджання батареї мобільних пристроїв.
+- **In-Memory Queue only:** Відхилено через ризик втрати даних при перезавантаженні сервера.
 
 ## Consequences
-+ **Positive**: No messages are lost due to queue eviction. Database acts as a reliable source of truth. Queue remains lightweight and fast.
-- **Negative**: Increased complexity on the client side, as it now needs to implement a robust synchronization logic (`GET /messages/sync`) upon every network reconnection, rather than just passively listening.
++ Гарантована доставка (At-least-once delivery).
++ Можливість синхронізації історії на різних пристроях.
+- Збільшення затримки (latency) через необхідність запису в БД.
+- Необхідність обробки дублікатів повідомлень на стороні клієнта.
