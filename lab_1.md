@@ -1,4 +1,4 @@
-##Component Diagram
+## Component Diagram
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
     Receiver -- "9. ACK Delivery" --> Queue
 ```
 
-##State Diagram
+## State Diagram
 
 ```mermaid
 stateDiagram-v2
