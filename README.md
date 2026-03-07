@@ -1,27 +1,47 @@
 # Messenger API Prototype (Lab 2)
 
-Цей проєкт є робочим прототипом системи обміну повідомленнями, реалізованим мовою C# (ASP.NET Core Web API). Архітектура базується на дизайні, створеному в Лабораторній 1, та включає елементи обробки офлайн-повідомлень (ADR-003).
+This project is a functional prototype of a messaging system implemented in **C# (ASP.NET Core Web API)**. The architecture is strictly based on the design created in **Lab 1** and incorporates elements of offline message processing as defined in **ADR-003**.
 
-## 🚀 Опис проєкту та реалізовані функції
-Проєкт реалізує мінімальну еталонну архітектуру (Minimal Reference Architecture) з такими можливостями:
-- **Створення користувачів** (`POST /users`).
-- **Відправка повідомлень** (`POST /messages`) із валідацією.
-- **Отримання історії чату** (`GET /conversations/{id}/messages`).
-- **Збереження даних (Persistence):** Використовується Entity Framework Core та база даних SQLite (`messenger.db`).
-- **Підтримка архітектури з Lab 1:** Повідомлення зберігаються зі статусом `PersistedInQueue`, імітуючи потрапляння в брокер повідомлень для користувачів, які перебувають в офлайні.
+---
 
-## 📂 Структура проєкту
-Проєкт розділено на логічні модулі для розділення відповідальності:
-- `/Messenger.Api/Models` - Сутності бази даних (`User`, `Message`, `Conversation`).
-- `/Messenger.Api/Storage` - Контекст бази даних EF Core (`ApplicationDbContext`).
-- `/Messenger.Api/Services` - Бізнес-логіка (`MessageService`), яка обробляє валідацію та збереження.
-- `/Messenger.Api/Controllers` - HTTP маршрути (API endpoints).
-- `/Messenger.Tests/IntegrationTests` - Наскрізні інтеграційні тести з використанням `xUnit` та бази даних у пам'яті.
-- `postman_collection.json` - Колекція для ручного тестування API.
+## 🚀 Project Description and Implemented Features
+The project implements the **Minimal Reference Architecture** with the following capabilities:
+* **User Creation:** `POST /users` endpoint to register new participants.
+* **Message Sending:** `POST /messages` with validation logic to ensure reliable delivery.
+* **Chat History Retrieval:** `GET /conversations/{id}/messages` to return conversation history.
+* **Data Persistence:** Uses **Entity Framework Core** and a **SQLite** database (`messenger.db`) to ensure messages are not lost after the program stops.
+* **Lab 1 Architecture Support:** Messages are stored with the status `PersistedInQueue`, simulating the behavior of a message broker for users who are currently offline.
 
-## 🛠 Як запустити програму
 
-1. Відкрийте термінал у кореневій папці проєкту.
-2. Перейдіть до папки API:
-   ```bash
-   cd Messenger.Api
+
+---
+
+## 📂 Project Structure
+The project is organized into logical modules to ensure separation of responsibilities:
+* `/Messenger.Api/Models` – Database entities: `User`, `Message`, and `Conversation`.
+* `/Messenger.Api/Storage` – EF Core database context: `ApplicationDbContext`.
+* `/Messenger.Api/Services` – Business logic: `MessageService` handling validation and persistence.
+* `/Messenger.Api/Controllers` – HTTP routes and API endpoints.
+* `/Messenger.Tests/IntegrationTests` – End-to-end integration tests using `xUnit`.
+* `postman_collection.json` – A collection for manual API testing and verification.
+
+---
+
+## 🛠 How to Run the Program
+
+1.  Open your terminal in the project's root folder.
+2.  Navigate to the API folder:
+    ```bash
+    cd Messenger.Api
+    ```
+3.  Run the server:
+    ```bash
+    dotnet run
+    ```
+    *(The `messenger.db` database will be created automatically on the first run)*.
+4.  For testing, import the `postman_collection.json` file into **Postman** and send requests to the URL provided by GitHub Codespaces.
+
+### Running Tests
+To execute the integration test that verifies the full message flow, run:
+```bash
+dotnet test
