@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "Messenger API - Lab 2",
+    "description": "Postman collection for testing the Messenger API (Lab 2 prototype)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"Alice\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/users",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Send Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"senderId\": \"PASTE_USER_ID_HERE\",\n    \"conversationId\": \"PASTE_CONVERSATION_ID_HERE\",\n    \"text\": \"Hello, this is my test message!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/messages",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "messages"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Get Messages History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/conversations/PASTE_CONVERSATION_ID_HERE/messages",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "conversations",
+            "PASTE_CONVERSATION_ID_HERE",
+            "messages"
+          ]
+        }
+      }
+    }
+  ]
+}

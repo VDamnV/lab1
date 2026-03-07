@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Messenger.Api/Messenger.Api.csproj" />
+  <Project Path="Messenger.Tests/Messenger.Tests.csproj" />
+</Solution>
